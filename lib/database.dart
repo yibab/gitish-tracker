@@ -35,7 +35,20 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2; // Incremented from 1
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onUpgrade: (migrator, from, to) async {
+        if (from < 2) {
+          // The completions and settings tables were added in version 2.
+          await migrator.createTable(completions);
+          await migrator.createTable(settings);
+        }
+      },
+    );
+  }
 
   // Habit Methods
   Future<int> addHabit(String name) => into(habits).insert(HabitsCompanion(name: Value(name)));
@@ -43,12 +56,18 @@ class AppDatabase extends _$AppDatabase {
 
   // Settings Methods
   Stream<int> watchHabitGoal() {
-    // Ensure the settings row exists, then watch it.
-    return (select(settings)..where((tbl) => tbl.id.equals(0))).watchSingle().map((s) => s.habitGoal);
+    return (select(settings)..where((tbl) => tbl.id.equals(0)))
+        .watchSingleOrNull()
+        .map((s) => s?.habitGoal ?? 1);
   }
 
   Future<void> updateHabitGoal(int goal) {
-    return into(settings).insertOnConflictUpdate(SettingsCompanion(habitGoal: Value(goal)));
+    // Using `insert` with `mode: InsertMode.replace` is a reliable "upsert" operation.
+    // It will insert the row if it doesn't exist, or replace it if it does.
+    return into(settings).insert(
+      SettingsCompanion(id: const Value(0), habitGoal: Value(goal)),
+      mode: InsertMode.replace,
+    );
   }
 
   // Completion Methods
@@ -68,6 +87,18 @@ class AppDatabase extends _$AppDatabase {
     return (delete(completions)
       ..where((tbl) => tbl.habitId.equals(habitId) & tbl.date.equals(date)))
       .go();
+  }
+
+  // Debug Method
+  Future<void> debugDumpAllData() async {
+    print('--- DATABASE DUMP ---');
+    final allHabits = await select(habits).get();
+    print('Habits: $allHabits');
+    final allCompletions = await select(completions).get();
+    print('Completions: $allCompletions');
+    final allSettings = await select(settings).get();
+    print('Settings: $allSettings');
+    print('--- END DUMP ---');
   }
 }
 

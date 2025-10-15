@@ -12,22 +12,17 @@ class HabitsPage extends StatefulWidget {
 }
 
 class _HabitsPageState extends State<HabitsPage> {
-  int habitGoal = 1;
-
-  void _incrementHabitGoal() {
-    setState(() {
-      if (habitGoal < 7) {
-        habitGoal++;
-      }
-    });
+  // The goal logic is now handled by a StreamBuilder connected to the database.
+  void _incrementHabitGoal(int currentGoal) {
+    if (currentGoal < 7) {
+      appDatabase.updateHabitGoal(currentGoal + 1);
+    }
   }
 
-  void _decrementHabitGoal() {
-    setState(() {
-      if (habitGoal > 1) {
-        habitGoal--;
-      }
-    });
+  void _decrementHabitGoal(int currentGoal) {
+    if (currentGoal > 1) {
+      appDatabase.updateHabitGoal(currentGoal - 1);
+    }
   }
 
   @override
@@ -37,6 +32,10 @@ class _HabitsPageState extends State<HabitsPage> {
         title: const Text('Habits'),
         actions: [
           IconButton(
+            onPressed: () => appDatabase.debugDumpAllData(),
+            icon: const Icon(Icons.bug_report),
+          ),
+          IconButton(
             onPressed: () => _showAddHabitDialog(context),
             icon: const Icon(Icons.add),
           ),
@@ -45,43 +44,50 @@ class _HabitsPageState extends State<HabitsPage> {
       body: Column(
         children: [
           const SizedBox(height: 10),
-          Center(
-            child: Column(
-              children: [
-                const Text(
-                  'Habit Goal Maximum',
-                  style: TextStyle(fontSize: 20),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      onPressed: _decrementHabitGoal,
-                      icon: const Icon(Icons.remove, size: 20),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 8,
+          // This StreamBuilder rebuilds the counter whenever the goal changes in the database.
+          StreamBuilder<int>(
+              stream: appDatabase.watchHabitGoal(),
+              builder: (context, snapshot) {
+                final habitGoal = snapshot.data ?? 1;
+
+                return Center(
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Habit Goal Maximum',
+                        style: TextStyle(fontSize: 20),
                       ),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8.0),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            onPressed: () => _decrementHabitGoal(habitGoal),
+                            icon: const Icon(Icons.remove, size: 20),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                            child: Text(
+                              '$habitGoal',
+                              style: Theme.of(context).textTheme.headlineMedium,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => _incrementHabitGoal(habitGoal),
+                            icon: const Icon(Icons.add, size: 20),
+                          ),
+                        ],
                       ),
-                      child: Text(
-                        '$habitGoal',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: _incrementHabitGoal,
-                      icon: const Icon(Icons.add, size: 20),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+                    ],
+                  ),
+                );
+              }),
           const SizedBox(height: 20),
           Text("Habits", style: Theme.of(context).textTheme.headlineSmall),
           Expanded(
@@ -100,21 +106,8 @@ class _HabitsPageState extends State<HabitsPage> {
                   itemCount: habits.length,
                   itemBuilder: (context, index) {
                     final habit = habits[index];
-                    return Dismissible(
-                      key: Key(habit.id.toString()),
-                      direction: DismissDirection.endToStart,
-                      onDismissed: (direction) {
-                        // Do nothing for now
-                      },
-                      background: Container(
-                        color: Colors.red,
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                        child: const Icon(Icons.delete, color: Colors.white),
-                      ),
-                      child: ListTile(
-                        title: Text(habit.name),
-                      ),
+                    return ListTile(
+                      title: Text(habit.name),
                     );
                   },
                 );

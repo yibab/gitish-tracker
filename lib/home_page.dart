@@ -13,9 +13,8 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  // A map to store the checked state of each habit.
   final Map<int, bool> _checkedHabits = {};
-  final bool _showMonth = true; // The month will now always be shown
+  final bool _showMonth = true;
 
   @override
   Widget build(BuildContext context) {
@@ -56,28 +55,22 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               )
             else
-              const SizedBox(height: 48.0), // Match headlineSmall height + padding
+              const SizedBox(height: 48.0),
 
             AspectRatio(
-              // This forces the container to a 6-wide by 7-high ratio,
-              // which will keep the cells inside square.
               aspectRatio: 6 / 7,
               child: GridView.builder(
                 scrollDirection: Axis.horizontal,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 7, // 7 rows
+                  crossAxisCount: 7,
                   mainAxisSpacing: 4.0,
                   crossAxisSpacing: 4.0,
                 ),
                 itemBuilder: (context, index) {
-                  // The grid now infinitely scrolls to the left (by reversing the list)
-                  return Card(
-                    color: Colors.green[700],
-                    shadowColor: Colors.transparent,
-                  );
+                  final date = DateTime.now().subtract(Duration(days: index));
+                  return DayBox(date: date);
                 },
-                // By not providing an itemCount, the grid becomes infinite.
-                reverse: true, // This makes the grid scroll infinitely to the left.
+                reverse: true,
               ),
             ),
             const SizedBox(height: 16),
@@ -85,7 +78,6 @@ class _MyHomePageState extends State<MyHomePage> {
               stream: appDatabase.watchAllHabits(),
               builder: (context, snapshot) {
                 final habits = snapshot.data ?? [];
-
                 if (habits.isEmpty) {
                   return const Center(
                     child: Padding(
@@ -94,7 +86,6 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   );
                 }
-
                 return ListView.builder(
                   physics: const NeverScrollableScrollPhysics(),
                   shrinkWrap: true,
@@ -110,6 +101,12 @@ class _MyHomePageState extends State<MyHomePage> {
                           setState(() {
                             _checkedHabits[habit.id] = value ?? false;
                           });
+
+                          if (value == true) {
+                            appDatabase.addCompletion(habit.id, DateTime.now());
+                          } else {
+                            appDatabase.removeCompletion(habit.id, DateTime.now());
+                          }
                         },
                       ),
                       title: Text(
@@ -125,5 +122,51 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
     );
+  }
+}
+
+// This is the new DayBox widget that handles its own color.
+class DayBox extends StatelessWidget {
+  final DateTime date;
+
+  const DayBox({super.key, required this.date});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<int>(
+      stream: appDatabase.watchHabitGoal(),
+      builder: (context, goalSnapshot) {
+        final habitGoal = goalSnapshot.data ?? 1;
+
+        return StreamBuilder<int>(
+          stream: appDatabase.watchCompletionCountForDay(date),
+          builder: (context, completionSnapshot) {
+            final completions = completionSnapshot.data ?? 0;
+            final color = _getColorForDay(completions, habitGoal);
+
+            return Card(
+              color: color,
+              shadowColor: Colors.transparent,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Color _getColorForDay(int completions, int goal) {
+    if (completions == 0) {
+      return Colors.grey[300]!;
+    }
+
+    final double percentage = completions / goal;
+
+    if (percentage >= 1.0) return Colors.green[700]!;
+    if (percentage >= 0.85) return Colors.green[600]!;
+    if (percentage >= 0.7) return Colors.green[500]!;
+    if (percentage >= 0.55) return Colors.green[400]!;
+    if (percentage >= 0.4) return Colors.green[300]!;
+    if (percentage >= 0.25) return Colors.green[200]!;
+    return Colors.green[100]!;
   }
 }
