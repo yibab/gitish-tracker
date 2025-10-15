@@ -12,6 +12,24 @@ class HabitsPage extends StatefulWidget {
 }
 
 class _HabitsPageState extends State<HabitsPage> {
+  int habitGoal = 1;
+
+  void _incrementHabitGoal() {
+    setState(() {
+      if (habitGoal < 7) {
+        habitGoal++;
+      }
+    });
+  }
+
+  void _decrementHabitGoal() {
+    setState(() {
+      if (habitGoal > 1) {
+        habitGoal--;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -24,27 +42,86 @@ class _HabitsPageState extends State<HabitsPage> {
           ),
         ],
       ),
-      body: StreamBuilder<List<Habit>>(
-        stream: appDatabase.watchAllHabits(),
-        builder: (context, snapshot) {
-          final habits = snapshot.data ?? [];
+      body: Column(
+        children: [
+          const SizedBox(height: 10),
+          Center(
+            child: Column(
+              children: [
+                const Text(
+                  'Habit Goal Maximum',
+                  style: TextStyle(fontSize: 20),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: _decrementHabitGoal,
+                      icon: const Icon(Icons.remove, size: 20),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Text(
+                        '$habitGoal',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _incrementHabitGoal,
+                      icon: const Icon(Icons.add, size: 20),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text("Habits", style: Theme.of(context).textTheme.headlineSmall),
+          Expanded(
+            child: StreamBuilder<List<Habit>>(
+              stream: appDatabase.watchAllHabits(),
+              builder: (context, snapshot) {
+                final habits = snapshot.data ?? [];
 
-          if (habits.isEmpty) {
-            return const Center(
-              child: Text('No habits yet. Add one!'),
-            );
-          }
+                if (habits.isEmpty) {
+                  return const Center(
+                    child: Text('No habits yet. Add one!'),
+                  );
+                }
 
-          return ListView.builder(
-            itemCount: habits.length,
-            itemBuilder: (context, index) {
-              final habit = habits[index];
-              return ListTile(
-                title: Text(habit.name),
-              );
-            },
-          );
-        },
+                return ListView.builder(
+                  itemCount: habits.length,
+                  itemBuilder: (context, index) {
+                    final habit = habits[index];
+                    return Dismissible(
+                      key: Key(habit.id.toString()),
+                      direction: DismissDirection.endToStart,
+                      onDismissed: (direction) {
+                        // Do nothing for now
+                      },
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: const Icon(Icons.delete, color: Colors.white),
+                      ),
+                      child: ListTile(
+                        title: Text(habit.name),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
