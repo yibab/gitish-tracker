@@ -118,12 +118,19 @@ class AppDatabase extends _$AppDatabase {
   // Debug Method
   Future<void> debugDumpAllData() async {
     print('--- DATABASE DUMP ---');
+
+    print('\nHabits:');
     final allHabits = await select(habits).get();
-    print('Habits: $allHabits');
+    allHabits.forEach((h) => print('  $h'));
+
+    print('\nCompletions:');
     final allCompletions = await select(completions).get();
-    print('Completions: $allCompletions');
+    allCompletions.forEach((c) => print('  $c'));
+
+    print('\nSettings:');
     final allSettings = await select(settings).get();
-    print('Settings: $allSettings');
+    allSettings.forEach((s) => print('  $s'));
+
     print('--- END DUMP ---');
   }
 }
