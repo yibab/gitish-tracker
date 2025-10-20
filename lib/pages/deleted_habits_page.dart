@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gitish_tracker/database.dart';
-
-import 'habits_page.dart';
+import 'package:gitish_tracker/pages/habit_heat_map.dart';
 
 class DeletedHabitsPage extends StatelessWidget {
   const DeletedHabitsPage({super.key});
@@ -40,10 +39,17 @@ class DeletedHabitsPage extends StatelessWidget {
                   color: Colors.green,
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: const Icon(Icons.restore, color: Colors.white),
+                  child: const Icon(Icons.add, color: Colors.white),
                 ),
                 child: ListTile(
                   title: Text(habit.name),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => HabitHeatMap(habit: habit)),
+                    );
+                  },
                 ),
               );
             },

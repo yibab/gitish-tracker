@@ -7,6 +7,9 @@ import 'package:path/path.dart' as p;
 
 part 'database.g.dart';
 
+// This is now the single source of truth for the database instance.
+final AppDatabase appDatabase = AppDatabase();
+
 // Defines the table for storing habits.
 class Habits extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -36,7 +39,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3; // Incremented from 2
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -90,6 +93,13 @@ class AppDatabase extends _$AppDatabase {
 
   Stream<int> watchCompletionCountForDay(DateTime date) {
     return watchCompletionsForDay(date).map((completions) => completions.length);
+  }
+
+  Stream<bool> watchIsHabitCompletedOnDay(int habitId, DateTime date) {
+    return (select(completions)
+          ..where((tbl) => tbl.habitId.equals(habitId) & tbl.date.equals(date)))
+        .watch()
+        .map((completions) => completions.isNotEmpty);
   }
 
   Future<void> addCompletion(int habitId, DateTime date) {

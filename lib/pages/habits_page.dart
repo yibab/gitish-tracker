@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gitish_tracker/database.dart';
-
-// A global instance of the database
-final AppDatabase appDatabase = AppDatabase();
+import 'package:gitish_tracker/pages/habit_heat_map.dart';
 
 class HabitsPage extends StatefulWidget {
   const HabitsPage({super.key});
@@ -123,6 +121,14 @@ class _HabitsPageState extends State<HabitsPage> {
                       ),
                       child: ListTile(
                         title: Text(habit.name),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => HabitHeatMap(habit: habit),
+                            ),
+                          );
+                        },
                       ),
                     );
                   },
