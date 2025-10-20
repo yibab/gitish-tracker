@@ -106,8 +106,24 @@ class _HabitsPageState extends State<HabitsPage> {
                   itemCount: habits.length,
                   itemBuilder: (context, index) {
                     final habit = habits[index];
-                    return ListTile(
-                      title: Text(habit.name),
+                    return Dismissible(
+                      key: Key(habit.id.toString()),
+                      direction: DismissDirection.endToStart,
+                      onDismissed: (direction) {
+                        appDatabase.archiveHabit(habit.id);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('${habit.name} archived')),
+                        );
+                      },
+                      background: Container(
+                        color: Colors.grey,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: const Icon(Icons.archive, color: Colors.white),
+                      ),
+                      child: ListTile(
+                        title: Text(habit.name),
+                      ),
                     );
                   },
                 );

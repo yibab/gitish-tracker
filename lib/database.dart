@@ -11,6 +11,7 @@ part 'database.g.dart';
 class Habits extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text().withLength(min: 1, max: 50)();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
 }
 
 // Defines the table for storing daily completions of habits.
@@ -35,16 +36,18 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2; // Incremented from 1
+  int get schemaVersion => 3; // Incremented from 2
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onUpgrade: (migrator, from, to) async {
         if (from < 2) {
-          // The completions and settings tables were added in version 2.
           await migrator.createTable(completions);
           await migrator.createTable(settings);
+        }
+        if (from < 3) {
+          await migrator.addColumn(habits, habits.isDeleted);
         }
       },
     );
@@ -52,7 +55,19 @@ class AppDatabase extends _$AppDatabase {
 
   // Habit Methods
   Future<int> addHabit(String name) => into(habits).insert(HabitsCompanion(name: Value(name)));
-  Stream<List<Habit>> watchAllHabits() => select(habits).watch();
+
+  // This now only watches for habits that are not soft-deleted.
+  Stream<List<Habit>> watchAllHabits() =>
+      (select(habits)..where((tbl) => tbl.isDeleted.equals(false))).watch();
+
+  Stream<List<Habit>> watchArchivedHabits() =>
+      (select(habits)..where((tbl) => tbl.isDeleted.equals(true))).watch();
+
+  Future<void> archiveHabit(int id) =>
+      (update(habits)..where((tbl) => tbl.id.equals(id))).write(const HabitsCompanion(isDeleted: Value(true)));
+
+  Future<void> restoreHabit(int id) =>
+      (update(habits)..where((tbl) => tbl.id.equals(id))).write(const HabitsCompanion(isDeleted: Value(false)));
 
   // Settings Methods
   Stream<int> watchHabitGoal() {
@@ -62,8 +77,6 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> updateHabitGoal(int goal) {
-    // Using `insert` with `mode: InsertMode.replace` is a reliable "upsert" operation.
-    // It will insert the row if it doesn't exist, or replace it if it does.
     return into(settings).insert(
       SettingsCompanion(id: const Value(0), habitGoal: Value(goal)),
       mode: InsertMode.replace,
@@ -71,9 +84,12 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // Completion Methods
+  Stream<List<Completion>> watchCompletionsForDay(DateTime date) {
+    return (select(completions)..where((tbl) => tbl.date.equals(date))).watch();
+  }
+
   Stream<int> watchCompletionCountForDay(DateTime date) {
-    final query = select(completions)..where((tbl) => tbl.date.equals(date));
-    return query.watch().map((rows) => rows.length);
+    return watchCompletionsForDay(date).map((completions) => completions.length);
   }
 
   Future<void> addCompletion(int habitId, DateTime date) {
@@ -85,8 +101,8 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> removeCompletion(int habitId, DateTime date) {
     return (delete(completions)
-      ..where((tbl) => tbl.habitId.equals(habitId) & tbl.date.equals(date)))
-      .go();
+          ..where((tbl) => tbl.habitId.equals(habitId) & tbl.date.equals(date)))
+        .go();
   }
 
   // Debug Method

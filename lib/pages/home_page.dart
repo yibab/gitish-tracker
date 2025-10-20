@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:gitish_tracker/database.dart';
-import 'package:gitish_tracker/settings_page.dart';
+import 'package:gitish_tracker/pages/settings_page.dart';
 import 'habits_page.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -15,7 +15,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final Map<int, bool> _checkedHabits = {};
+  // The _checkedHabits map is no longer needed as we now get the state from the database.
   final ScrollController _gridScrollController = ScrollController();
   String _leftMonthText = '';
   String _rightMonthText = '';
@@ -148,8 +148,8 @@ class _MyHomePageState extends State<MyHomePage> {
             const SizedBox(height: 16),
             StreamBuilder<List<Habit>>(
               stream: appDatabase.watchAllHabits(),
-              builder: (context, snapshot) {
-                final habits = snapshot.data ?? [];
+              builder: (context, habitsSnapshot) {
+                final habits = habitsSnapshot.data ?? [];
                 if (habits.isEmpty) {
                   return const Center(
                     child: Padding(
@@ -158,36 +158,44 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   );
                 }
-                return ListView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  itemCount: habits.length,
-                  itemBuilder: (context, index) {
-                    final habit = habits[index];
-                    final isChecked = _checkedHabits[habit.id] ?? false;
+                // This new StreamBuilder watches for today's completions.
+                return StreamBuilder<List<Completion>>(
+                    stream: appDatabase.watchCompletionsForDay(today),
+                    builder: (context, completionsSnapshot) {
+                      final completions = completionsSnapshot.data ?? [];
+                      final completedHabitIds =
+                          completions.map((c) => c.habitId).toSet();
 
-                    return ListTile(
-                      leading: Checkbox(
-                        value: isChecked,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            _checkedHabits[habit.id] = value ?? false;
-                          });
+                      return ListView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        itemCount: habits.length,
+                        itemBuilder: (context, index) {
+                          final habit = habits[index];
+                          // The checked state is now derived directly from the database stream.
+                          final isChecked = completedHabitIds.contains(habit.id);
 
-                          if (value == true) {
-                            appDatabase.addCompletion(habit.id, DateTime.now());
-                          } else {
-                            appDatabase.removeCompletion(habit.id, DateTime.now());
-                          }
+                          return ListTile(
+                            leading: Checkbox(
+                              value: isChecked,
+                              onChanged: (bool? value) {
+                                // The setState call is no longer needed because the StreamBuilder
+                                // will automatically rebuild the UI when the database changes.
+                                if (value == true) {
+                                  appDatabase.addCompletion(habit.id, today);
+                                } else {
+                                  appDatabase.removeCompletion(habit.id, today);
+                                }
+                              },
+                            ),
+                            title: Text(
+                              habit.name,
+                              style: Theme.of(context).textTheme.headlineSmall,
+                            ),
+                          );
                         },
-                      ),
-                      title: Text(
-                        habit.name,
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                    );
-                  },
-                );
+                      );
+                    });
               },
             ),
           ],
