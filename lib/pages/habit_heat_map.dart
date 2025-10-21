@@ -2,6 +2,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:gitish_tracker/database.dart';
 
+import '../widgets/habit_day_box.dart';
+
 class HabitHeatMap extends StatefulWidget {
   final Habit habit;
 
@@ -117,7 +119,7 @@ class _HabitHeatMapState extends State<HabitHeatMap> {
                       final date = sundayOfThisWeek
                           .add(Duration(days: 6 - row))
                           .subtract(Duration(days: 7 * column));
-                      return _HabitDayBox(
+                      return HabitDayBox(
                         date: date,
                         habitId: widget.habit.id,
                       );
@@ -134,38 +136,3 @@ class _HabitHeatMapState extends State<HabitHeatMap> {
   }
 }
 
-class _HabitDayBox extends StatelessWidget {
-  final DateTime date;
-  final int habitId;
-
-  const _HabitDayBox({required this.date, required this.habitId});
-
-  @override
-  Widget build(BuildContext context) {
-    final today = DateUtils.dateOnly(DateTime.now());
-    final isFuture = date.isAfter(today);
-
-    return StreamBuilder<bool>(
-      stream: appDatabase.watchIsHabitCompletedOnDay(habitId, date),
-      builder: (context, snapshot) {
-        final isCompleted = snapshot.data ?? false;
-        final color = isFuture
-            ? Colors.white
-            : isCompleted
-                ? Colors.green[700]
-                : Colors.grey[300];
-
-        return Card(
-          color: color,
-          shadowColor: Colors.transparent,
-          child: Transform.rotate(
-            angle: pi,
-            child: Center(
-              child: Text(isFuture ? '' : '${date.day}'),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
