@@ -8,7 +8,7 @@ class HabitDayBox extends StatelessWidget {
   final DateTime date;
   final int habitId;
 
-  const HabitDayBox({required this.date, required this.habitId});
+  const HabitDayBox({super.key, required this.date, required this.habitId});
 
   @override
   Widget build(BuildContext context) {
