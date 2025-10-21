@@ -30,9 +30,6 @@ class DayBox extends StatelessWidget {
               shadowColor: Colors.transparent,
               child: Transform.rotate(
                 angle: pi,
-                child: Center(
-                  child: Text(isFuture ? '' : '${date.day}'),
-                ),
               ),
             );
           },
