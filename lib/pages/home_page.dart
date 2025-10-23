@@ -5,6 +5,8 @@ import 'package:gitish_tracker/database.dart';
 import 'package:gitish_tracker/pages/settings_page.dart';
 import '../widgets/day_box.dart';
 import 'habits_page.dart';
+import 'package:davinci/core/davinci_capture.dart';
+import 'package:davinci/davinci.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -20,6 +22,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final ScrollController _gridScrollController = ScrollController();
   String _leftMonthText = '';
   String _rightMonthText = '';
+  GlobalKey? imageKey;
 
   @override
   void initState() {
@@ -123,28 +126,36 @@ class _MyHomePageState extends State<MyHomePage> {
                 ],
               ),
             ),
-            AspectRatio(
-              aspectRatio: 6 / 7,
-              child: Transform.rotate(
-                angle: pi,
-                child: GridView.builder(
-                  controller: _gridScrollController,
-                  scrollDirection: Axis.horizontal,
-                  itemCount: 365,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 7,
-                    mainAxisSpacing: 4.0,
-                    crossAxisSpacing: 4.0,
+            Davinci(
+              builder: (key) {
+                imageKey = key;
+                return
+                AspectRatio(
+                  aspectRatio: 6 / 7,
+                  child: Transform.rotate(
+                    angle: pi,
+                    child: GridView.builder(
+                      controller: _gridScrollController,
+                      scrollDirection: Axis.horizontal,
+                      itemCount: 365,
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 7,
+                        mainAxisSpacing: 4.0,
+                        crossAxisSpacing: 4.0,
+                      ),
+                      itemBuilder: (context, index) {
+                        final column = index ~/ 7;
+                        final row = index % 7;
+                        final date = sundayOfThisWeek.add(
+                            Duration(days: 6 - row)).subtract(Duration(
+                            days: 7 * column));
+                        return DayBox(date: date);
+                      },
+                      reverse: false,
+                    ),
                   ),
-                  itemBuilder: (context, index) {
-                    final column = index ~/ 7;
-                    final row = index % 7;
-                    final date = sundayOfThisWeek.add(Duration(days: 6 - row)).subtract(Duration(days: 7 * column));
-                    return DayBox(date: date);
-                  },
-                  reverse: false,
-                ),
-              ),
+                );
+              },
             ),
             const SizedBox(height: 16),
             StreamBuilder<List<Habit>>(
@@ -179,14 +190,24 @@ class _MyHomePageState extends State<MyHomePage> {
                           return ListTile(
                             leading: Checkbox(
                               value: isChecked,
-                              onChanged: (bool? value) {
+                              onChanged: (bool? value) async {
                                 // The setState call is no longer needed because the StreamBuilder
                                 // will automatically rebuild the UI when the database changes.
                                 if (value == true) {
                                   appDatabase.addCompletion(habit.id, today);
+
                                 } else {
                                   appDatabase.removeCompletion(habit.id, today);
                                 }
+                                await DavinciCapture.click(
+                                  imageKey!,
+                                  context: context,
+                                  // pixelRatio: 3,
+                                  // saveToDevice: false,
+                                  // openFilePreview: true,
+                                  // albumName: "Davinci",
+                                  // imageName: "gitish_tracker_snapshot",
+                                );
                               },
                             ),
                             title: Text(
@@ -205,4 +226,3 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
-
