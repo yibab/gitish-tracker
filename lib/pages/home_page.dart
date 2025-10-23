@@ -184,6 +184,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                   appDatabase.removeCompletion(habit.id, today);
                                 }
 
+                                // Reset the scroll position of the grid.
+                                _gridScrollController.jumpTo(0.0);
+
                                 final bytes = await screenshotController.capture();
 
                                 if (bytes != null) {
@@ -216,8 +219,12 @@ class _MyHomePageState extends State<MyHomePage> {
                                 }
                               },
                             ),
-                            title: Text(habit.name,
-                                style: Theme.of(context).textTheme.headlineSmall),
+                            title: Text(
+                              habit.name,
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                decoration: isChecked ? TextDecoration.lineThrough : null,
+                              ),
+                            ),
                           );
                         },
                       );
